@@ -71,8 +71,8 @@ Estas estruturas sustentam operações internas do parser, das buscas e da naveg
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/teu-usuario/urban-nav-system.git
-cd urban-nav-system
+git clone https://github.com/J3ffreyJr/Sistema-de-navega-o-Urban.git
+cd Sistema-de-navega-o-Urban
 ```
 
 ### 2. Adicionar o ficheiro OSM
