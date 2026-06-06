@@ -8,6 +8,8 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,14 +37,24 @@ public class OsmParser {
         XMLInputFactory factory = XMLInputFactory.newInstance();
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
 
-        try (FileInputStream fis = new FileInputStream(caminhoFicheiro)) {
-            XMLStreamReader reader = factory.createXMLStreamReader(fis);
+        InputStream fis = getClass()
+        .getClassLoader()
+        .getResourceAsStream("data/maputo-centro.osm");
 
-            WayTemp wayAtual = null;
-            boolean dentroDeWay = false;
-            String nomeRuaAtual = null;
-            boolean highwayValido = false;
+if (fis == null) {
+    throw new FileNotFoundException(
+            "data/maputo-centro.osm não encontrado no classpath");
+}
 
+try (fis) {
+
+    XMLStreamReader reader = factory.createXMLStreamReader(fis);
+
+    WayTemp wayAtual = null;
+    boolean dentroDeWay = false;
+    String nomeRuaAtual = null;
+    boolean highwayValido = false;
+   
             while (reader.hasNext()) {
                 int evento = reader.next();
 
