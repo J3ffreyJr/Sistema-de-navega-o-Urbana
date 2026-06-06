@@ -23,8 +23,8 @@ public class OsmParser {
             "motorway_link", "trunk_link", "primary_link", "secondary_link"
     );
 
-    public Grafo parse(String caminhoFicheiro) throws Exception {
-        System.out.println("A carregar OSM: " + caminhoFicheiro);
+    public Grafo parse() throws Exception {
+        System.out.println("A carregar OSM: " + "data/maputo-centro.osm");
 
         Grafo grafo = new Grafo();
 

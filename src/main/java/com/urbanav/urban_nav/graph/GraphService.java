@@ -4,7 +4,6 @@ import com.urbanav.urban_nav.parser.OsmParser;
 import com.urbanav.urban_nav.trie.Trie;
 import javax.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,9 +15,6 @@ public class GraphService {
     @Autowired
     private Trie trie;
 
-    @Value("${osm.file.path:src/main/resources/data/maputo.osm}")
-    private String osmFilePath;
-
     private Grafo grafo;
 
     @PostConstruct
@@ -26,9 +22,8 @@ public class GraphService {
         System.out.println("=== Urban Nav: Iniciando carregamento do OSM ===");
         long inicio = System.currentTimeMillis();
 
-        grafo = osmParser.parse(osmFilePath);
+        grafo = osmParser.parse();
 
-        // Indexar nomes de ruas na Trie
         grafo.getNos().values().forEach(noGrafo -> {
             String nome = noGrafo.getNodeOsm().getNome();
             if (nome != null && !nome.isEmpty()) {
