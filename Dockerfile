@@ -11,7 +11,7 @@ COPY src ./src
 # Apagar possível ponteiro Git LFS e baixar o ficheiro OSM real
 RUN rm -f src/main/resources/data/maputo-centro.osm && \
     mkdir -p src/main/resources/data && \
-    curl -L -o src/main/resources/data/maputo-centro.osm "COLOQUE_AQUI_O_LINK_DIRETO_DO_OSM"
+    curl -L -o src/main/resources/data/maputo-centro.osm "https://overpass-api.de/api/map?bbox=32.54,-25.985,32.62,-25.89"
 
 RUN mvn clean package -DskipTests
 
