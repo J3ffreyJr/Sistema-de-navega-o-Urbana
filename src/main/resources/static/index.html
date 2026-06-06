@@ -374,7 +374,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const API='http://localhost:8080/api';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8080/api'
+  : 'https://urban-nav.onrender.com/api';
 const C={dijkstra:'#0a7c52',bfs:'#1558d6',dfs:'#b05c00'};
 const N={dijkstra:'Dijkstra',bfs:'BFS',dfs:'DFS'};
 const TL='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
@@ -799,7 +801,7 @@ async function check(){
     // Carregar markers dos POIs no mapa após servidor estar online
     carregarPoiMarkers();
   }catch{
-    serverOk=false;setStatus('er','Servidor offline — inicia com .\\mvnw spring-boot:run');setTimeout(check,5000);
+    setStatus('er','Servidor offline — tentando conectar ao backend...');setTimeout(check,5000);
   }
 }
 
