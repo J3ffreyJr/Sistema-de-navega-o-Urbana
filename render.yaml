@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: urban-nav
+    runtime: java
+    plan: starter        # plano gratuito — 512MB RAM
+    region: frankfurt    # mais próximo de Moçambique
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -Xmx400m -Xms128m -jar target/urban-nav-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: OSM_FILE_PATH
+        value: src/main/resources/data/maputo-centro.osm
+      - key: SERVER_PORT
+        value: 10000
+      - key: JAVA_OPTS
+        value: "-Xmx400m -Xms128m"
+    healthCheckPath: /api/status
+    autoDeploy: true
