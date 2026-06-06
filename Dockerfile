@@ -8,13 +8,15 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY src ./src
 
-# Apagar possível ponteiro Git LFS e baixar o ficheiro OSM real
 RUN rm -f src/main/resources/data/maputo-centro.osm && \
     mkdir -p src/main/resources/data && \
-    curl -L -o src/main/resources/data/maputo-centro.osm "https://overpass-api.de/api/map?bbox=32.54,-25.985,32.62,-25.89"
+    curl -L --fail -H "User-Agent: UrbanNav/1.0" \
+    -o src/main/resources/data/maputo-centro.osm \
+    "https://overpass-api.de/api/map?bbox=32.54,-25.985,32.62,-25.89"
+
+RUN head -100 src/main/resources/data/maputo-centro.osm
 
 RUN mvn clean package -DskipTests
-
 
 # Fase 2: Runtime leve
 FROM eclipse-temurin:11-jre-alpine

@@ -5,7 +5,9 @@ import org.springframework.stereotype.Component;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
-import java.io.FileInputStream;
+//import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -83,7 +85,17 @@ public class PoiParser {
         XMLInputFactory factory = XMLInputFactory.newInstance();
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
 
-        try (FileInputStream fis = new FileInputStream(caminhoFicheiro)) {
+        InputStream fis = getClass()
+        .getClassLoader()
+        .getResourceAsStream("data/maputo-centro.osm");
+
+if (fis == null) {
+    throw new FileNotFoundException(
+            "data/maputo-centro.osm não encontrado no classpath"
+    );
+}
+
+try (fis) {
             XMLStreamReader reader = factory.createXMLStreamReader(fis);
 
             // Estado do parser
