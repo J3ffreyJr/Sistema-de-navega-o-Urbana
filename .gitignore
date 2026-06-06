@@ -1,0 +1,15 @@
+target/
+*.class
+*.jar
+*.war
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Ficheiro OSM grande — não vai para o GitHub (600MB)
+# Usar apenas maputo-centro.osm (versão reduzida)
+src/main/resources/data/maputo.osm
+
+# Guardar apenas o ficheiro reduzido
+!src/main/resources/data/maputo-centro.osm
