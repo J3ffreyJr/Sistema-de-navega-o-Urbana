@@ -6,9 +6,9 @@ import com.urbanav.urban_nav.algorithm.Dijkstra;
 import com.urbanav.urban_nav.graph.Grafo;
 import com.urbanav.urban_nav.graph.GraphService;
 import com.urbanav.urban_nav.model.NodeOsm;
-import com.urbanav.urban_nav.api.poi.Poi;
-import com.urbanav.urban_nav.api.poi.PoiParser;
-import com.urbanav.urban_nav.api.poi.PoiService;
+import com.urbanav.urban_nav.poi.Poi;
+import com.urbanav.urban_nav.poi.PoiParser;
+import com.urbanav.urban_nav.poi.PoiService;
 import com.urbanav.urban_nav.structure.ListaLigada;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +28,6 @@ public class RouteController {
     @Autowired private PoiService poiService;
     @Autowired private PoiParser poiParser;
 
-    // GET /api/status
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> status() {
         Grafo grafo = graphService.getGrafo();
@@ -40,7 +39,6 @@ public class RouteController {
         return ResponseEntity.ok(resp);
     }
 
-    // GET /api/rota/dijkstra
     @GetMapping("/rota/dijkstra")
     public ResponseEntity<Map<String, Object>> rotaDijkstra(
             @RequestParam double origemLat, @RequestParam double origemLon,
@@ -52,7 +50,6 @@ public class RouteController {
         return ResponseEntity.ok(formatarRota(resultado.getCaminho(), resultado.getDistanciaTotal(), "dijkstra"));
     }
 
-    // GET /api/rota/bfs
     @GetMapping("/rota/bfs")
     public ResponseEntity<Map<String, Object>> rotaBFS(
             @RequestParam double origemLat, @RequestParam double origemLon,
@@ -64,7 +61,6 @@ public class RouteController {
         return ResponseEntity.ok(formatarRota(caminho, -1, "bfs"));
     }
 
-    // GET /api/rota/dfs
     @GetMapping("/rota/dfs")
     public ResponseEntity<Map<String, Object>> rotaDFS(
             @RequestParam double origemLat, @RequestParam double origemLon,
@@ -76,7 +72,6 @@ public class RouteController {
         return ResponseEntity.ok(formatarRota(caminho, -1, "dfs"));
     }
 
-    // GET /api/poi/busca?prefixo=... (compatibilidade com frontend antigo)
     @GetMapping("/poi/busca")
     public ResponseEntity<List<Map<String, Object>>> buscarPOILegado(@RequestParam String prefixo) {
         List<Poi> resultados = poiService.buscar(prefixo, 10);
@@ -94,14 +89,15 @@ public class RouteController {
         return ResponseEntity.ok(lista);
     }
 
-    // GET /api/no/proximo
     @GetMapping("/no/proximo")
     public ResponseEntity<Map<String, Object>> noMaisProximo(
             @RequestParam double lat, @RequestParam double lon) {
         NodeOsm no = graphService.getGrafo().nodoMaisProximo(lat, lon);
         Map<String, Object> resp = new HashMap<>();
-        resp.put("id", no.getId()); resp.put("lat", no.getLat());
-        resp.put("lon", no.getLon()); resp.put("nome", no.getNome());
+        resp.put("id", no.getId());
+        resp.put("lat", no.getLat());
+        resp.put("lon", no.getLon());
+        resp.put("nome", no.getNome());
         return ResponseEntity.ok(resp);
     }
 
@@ -110,11 +106,14 @@ public class RouteController {
         for (int i = 0; i < caminho.tamanho(); i++) {
             NodeOsm n = (NodeOsm) caminho.pega(i);
             Map<String, Object> ponto = new HashMap<>();
-            ponto.put("lat", n.getLat()); ponto.put("lon", n.getLon()); ponto.put("id", n.getId());
+            ponto.put("lat", n.getLat());
+            ponto.put("lon", n.getLon());
+            ponto.put("id", n.getId());
             pontos.add(ponto);
         }
         Map<String, Object> resp = new HashMap<>();
-        resp.put("algoritmo", algoritmo); resp.put("caminho", pontos);
+        resp.put("algoritmo", algoritmo);
+        resp.put("caminho", pontos);
         resp.put("totalNos", caminho.tamanho());
         if (distancia >= 0) resp.put("distanciaMetros", Math.round(distancia));
         return resp;

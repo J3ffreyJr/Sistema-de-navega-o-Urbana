@@ -2,15 +2,19 @@ package com.urbanav.urban_nav.algorithm;
 
 import com.urbanav.urban_nav.graph.Grafo;
 import com.urbanav.urban_nav.graph.NoGrafo;
+import com.urbanav.urban_nav.heap.MinHeap;
 import com.urbanav.urban_nav.model.Aresta;
-import com.urbanav.urban_nav.model.NodeOsm;
 import com.urbanav.urban_nav.structure.ListaLigada;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.PriorityQueue;
 
+/**
+ * Algoritmo de Dijkstra usando MinHeap customizado (requisito 2.3 — heap optimizador).
+ * Encontra o caminho mais curto entre dois nós no grafo viário de Maputo.
+ * Complexidade: O((V + E) log V)
+ */
 @Component
 public class Dijkstra {
 
@@ -22,39 +26,38 @@ public class Dijkstra {
             throw new IllegalArgumentException("Origem ou destino nao encontrado no grafo.");
         }
 
-        // distancia minima acumulada de cada no
+        // Distância mínima acumulada de cada nó
         Map<Long, Double> distancia = new HashMap<>();
-        // no anterior no caminho otimo
+        // Nó anterior no caminho óptimo
         Map<Long, Long> anterior = new HashMap<>();
-        // rua usada para chegar ao no
+        // Rua usada para chegar ao nó
         Map<Long, String> ruaAnterior = new HashMap<>();
 
-        // Fila de prioridade: [distancia, idNo]
-        PriorityQueue<long[]> filaPrioridade = new PriorityQueue<>(
-                (a, b) -> Double.compare(Double.longBitsToDouble(a[1]), Double.longBitsToDouble(b[1]))
-        );
+        // MinHeap customizado — substitui PriorityQueue do Java
+        MinHeap heap = new MinHeap(grafo.totalNos());
 
-        // Inicializar todas as distancias como infinito
+        // Inicializar distâncias como infinito
         for (Long id : grafo.getNos().keySet()) {
             distancia.put(id, Double.MAX_VALUE);
         }
         distancia.put(idOrigem, 0.0);
-        filaPrioridade.offer(new long[]{idOrigem, Double.doubleToLongBits(0.0)});
+        heap.inserir(idOrigem, 0.0);
 
-        while (!filaPrioridade.isEmpty()) {
-            long[] atual = filaPrioridade.poll();
-            long idAtual = atual[0];
-            double distAtual = Double.longBitsToDouble(atual[1]);
+        while (!heap.isEmpty()) {
+            MinHeap.Entrada atual = heap.extrairMin();
+            long idAtual = atual.idNo;
+            double distAtual = atual.distancia;
 
-            // Se chegamos ao destino, podemos parar
+            // Chegou ao destino — parar
             if (idAtual == idDestino) break;
 
-            // Ignorar se ja encontramos caminho melhor
-            if (distAtual > distancia.get(idAtual)) continue;
+            // Entrada obsoleta (distância maior que a actual) — ignorar
+            if (distAtual > distancia.getOrDefault(idAtual, Double.MAX_VALUE)) continue;
 
             NoGrafo noAtual = grafo.buscarNo(idAtual);
             if (noAtual == null) continue;
 
+            // Relaxar arestas dos vizinhos
             ListaLigada vizinhos = noAtual.getVizinhos();
             for (int i = 0; i < vizinhos.tamanho(); i++) {
                 Aresta aresta = (Aresta) vizinhos.pega(i);
@@ -65,32 +68,27 @@ public class Dijkstra {
                     distancia.put(idVizinho, novaDist);
                     anterior.put(idVizinho, idAtual);
                     ruaAnterior.put(idVizinho, aresta.getNomeRua());
-                    filaPrioridade.offer(new long[]{idVizinho, Double.doubleToLongBits(novaDist)});
+                    // Inserir no MinHeap customizado
+                    heap.inserir(idVizinho, novaDist);
                 }
             }
         }
 
-        // Reconstruir caminho
         return reconstruirCaminho(grafo, anterior, ruaAnterior, distancia, idOrigem, idDestino);
     }
 
     private ResultadoRota reconstruirCaminho(
-            Grafo grafo,
-            Map<Long, Long> anterior,
-            Map<Long, String> ruaAnterior,
-            Map<Long, Double> distancia,
-            long idOrigem, long idDestino) {
+            Grafo grafo, Map<Long, Long> anterior, Map<Long, String> ruaAnterior,
+            Map<Long, Double> distancia, long idOrigem, long idDestino) {
 
         ListaLigada caminho = new ListaLigada();
         ListaLigada nomesDasRuas = new ListaLigada();
         double distanciaTotal = distancia.getOrDefault(idDestino, Double.MAX_VALUE);
 
         if (distanciaTotal == Double.MAX_VALUE) {
-            // Sem caminho
             return new ResultadoRota(caminho, nomesDasRuas, -1);
         }
 
-        // Percorrer para tras a partir do destino
         Long atual = idDestino;
         while (atual != null) {
             NoGrafo no = grafo.buscarNo(atual);
@@ -103,11 +101,10 @@ public class Dijkstra {
         return new ResultadoRota(caminho, nomesDasRuas, distanciaTotal);
     }
 
-    // Classe resultado
     public static class ResultadoRota {
-        private ListaLigada caminho;       // lista de NodeOsm
-        private ListaLigada nomesDasRuas;  // lista de String
-        private double distanciaTotal;     // em metros
+        private final ListaLigada caminho;
+        private final ListaLigada nomesDasRuas;
+        private final double distanciaTotal;
 
         public ResultadoRota(ListaLigada caminho, ListaLigada nomesDasRuas, double distanciaTotal) {
             this.caminho = caminho;
