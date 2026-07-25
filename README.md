@@ -171,7 +171,7 @@ A ideia é servir como base para navegação urbana, exploração de POIs e aná
 
 ## Licença
 
-Definir de acordo com a tua preferência antes de publicar.
+.
 
 ## Autor
 
