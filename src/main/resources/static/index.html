@@ -2230,6 +2230,12 @@
       const SECONDARY_GEOCODER =
         "https://nominatim.openstreetmap.org/search";
       const MAPUTO_VIEWBOX = "32.42,-25.77,32.72,-26.00";
+      const MAPUTO_BOUNDS = {
+        minLat: -26.0,
+        maxLat: -25.77,
+        minLon: 32.42,
+        maxLon: 32.72,
+      };
       const searchInput = document.getElementById("pin");
       searchInput.addEventListener("keydown", async (event) => {
         if (event.key !== "Enter") return;
@@ -2329,16 +2335,44 @@
         if (!response.ok) throw new Error("secondary geocoder failed");
         const data = await response.json();
         return data
-          .filter((item) => item.lat && item.lon)
           .map((item) => ({
-            nome: item.name || item.display_name.split(",")[0],
+            ...item,
             lat: Number(item.lat),
             lon: Number(item.lon),
+          }))
+          .filter((item) => isValidCoordinate(item.lat, item.lon))
+          .filter((item) =>
+            isWithinMaputo(item.lat, item.lon),
+          )
+          .map((item) => ({
+            nome: item.name || item.display_name.split(",")[0],
+            lat: item.lat,
+            lon: item.lon,
             tipo: item.type || item.class || "place",
             tipoLabel: "Fonte secundária",
             morada: item.display_name,
             fonte: "Nominatim",
           }));
+      }
+
+      function isValidCoordinate(lat, lon) {
+        return (
+          Number.isFinite(lat) &&
+          Number.isFinite(lon) &&
+          lat >= -90 &&
+          lat <= 90 &&
+          lon >= -180 &&
+          lon <= 180
+        );
+      }
+
+      function isWithinMaputo(lat, lon) {
+        return (
+          lat >= MAPUTO_BOUNDS.minLat &&
+          lat <= MAPUTO_BOUNDS.maxLat &&
+          lon >= MAPUTO_BOUNDS.minLon &&
+          lon <= MAPUTO_BOUNDS.maxLon
+        );
       }
 
       function parseNaturalRoute(value) {
@@ -2368,7 +2402,19 @@
           );
           if (!response.ok) throw new Error("local POI search failed");
           const results = await response.json();
-          if (results[0]) return results[0];
+          const local = results[0]
+            ? {
+                ...results[0],
+                lat: Number(results[0].lat),
+                lon: Number(results[0].lon),
+              }
+            : null;
+          if (
+            local &&
+            isValidCoordinate(local.lat, local.lon)
+          ) {
+            return local;
+          }
         } catch {
           // A fonte secundária abaixo mantém a pesquisa disponível se o backend falhar.
         }
@@ -2385,7 +2431,12 @@
             findLocalPoi(route.origin),
             findLocalPoi(route.destination),
           ]);
-          if (!origin || !destination) {
+          if (
+            !origin ||
+            !destination ||
+            !isValidCoordinate(origin.lat, origin.lon) ||
+            !isValidCoordinate(destination.lat, destination.lon)
+          ) {
             const missing = !origin && !destination
               ? "origem e destino"
               : !origin
@@ -2468,6 +2519,12 @@
       }
 
       function selPoi(lat, lon, nm, tipo) {
+        lat = Number(lat);
+        lon = Number(lon);
+        if (!isValidCoordinate(lat, lon)) {
+          showBanner("Este local não tem coordenadas válidas para calcular a rota.");
+          return;
+        }
         document.getElementById("pin").value = nm;
         hideDrop();
         map.setView([lat, lon], 16);
