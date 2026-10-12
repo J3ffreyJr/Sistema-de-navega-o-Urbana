@@ -12,6 +12,7 @@ import com.urbanav.urban_nav.poi.PoiService;
 import com.urbanav.urban_nav.structure.ListaLigada;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -20,6 +21,8 @@ import java.util.*;
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class RouteController {
+
+    private static final double MAX_SNAP_DISTANCE_METERS = 300.0;
 
     @Autowired private GraphService graphService;
     @Autowired private Dijkstra dijkstra;
@@ -44,8 +47,8 @@ public class RouteController {
             @RequestParam double origemLat, @RequestParam double origemLon,
             @RequestParam double destinoLat, @RequestParam double destinoLon) {
         Grafo grafo = graphService.getGrafo();
-        NodeOsm origem  = grafo.nodoMaisProximo(origemLat, origemLon);
-        NodeOsm destino = grafo.nodoMaisProximo(destinoLat, destinoLon);
+        NodeOsm origem  = noViarioValido(grafo, origemLat, origemLon, "origem");
+        NodeOsm destino = noViarioValido(grafo, destinoLat, destinoLon, "destino");
         Dijkstra.ResultadoRota resultado = dijkstra.calcular(grafo, origem.getId(), destino.getId());
         return ResponseEntity.ok(formatarRota(resultado.getCaminho(), resultado.getDistanciaTotal(), "dijkstra"));
     }
@@ -55,8 +58,8 @@ public class RouteController {
             @RequestParam double origemLat, @RequestParam double origemLon,
             @RequestParam double destinoLat, @RequestParam double destinoLon) {
         Grafo grafo = graphService.getGrafo();
-        NodeOsm origem  = grafo.nodoMaisProximo(origemLat, origemLon);
-        NodeOsm destino = grafo.nodoMaisProximo(destinoLat, destinoLon);
+        NodeOsm origem  = noViarioValido(grafo, origemLat, origemLon, "origem");
+        NodeOsm destino = noViarioValido(grafo, destinoLat, destinoLon, "destino");
         ListaLigada caminho = bfs.encontrarCaminho(grafo, origem.getId(), destino.getId());
         return ResponseEntity.ok(formatarRota(caminho, -1, "bfs"));
     }
@@ -66,8 +69,8 @@ public class RouteController {
             @RequestParam double origemLat, @RequestParam double origemLon,
             @RequestParam double destinoLat, @RequestParam double destinoLon) {
         Grafo grafo = graphService.getGrafo();
-        NodeOsm origem  = grafo.nodoMaisProximo(origemLat, origemLon);
-        NodeOsm destino = grafo.nodoMaisProximo(destinoLat, destinoLon);
+        NodeOsm origem  = noViarioValido(grafo, origemLat, origemLon, "origem");
+        NodeOsm destino = noViarioValido(grafo, destinoLat, destinoLon, "destino");
         ListaLigada caminho = dfs.encontrarCaminho(grafo, origem.getId(), destino.getId());
         return ResponseEntity.ok(formatarRota(caminho, -1, "dfs"));
     }
@@ -99,6 +102,26 @@ public class RouteController {
         resp.put("lon", no.getLon());
         resp.put("nome", no.getNome());
         return ResponseEntity.ok(resp);
+    }
+
+    private NodeOsm noViarioValido(Grafo grafo, double lat, double lon, String nome) {
+        if (!Double.isFinite(lat) || !Double.isFinite(lon)) {
+            throw new ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Coordenadas inválidas para " + nome
+            );
+        }
+        NodeOsm no = grafo.nodoMaisProximo(lat, lon);
+        double distancia = grafo.distanciaAoNoMaisProximo(lat, lon);
+        if (no == null || distancia > MAX_SNAP_DISTANCE_METERS) {
+            throw new ResponseStatusException(
+                org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY,
+                "A " + nome + " está a " + Math.round(distancia)
+                    + " m da rede viária; máximo permitido: "
+                    + Math.round(MAX_SNAP_DISTANCE_METERS) + " m"
+            );
+        }
+        return no;
     }
 
     private Map<String, Object> formatarRota(ListaLigada caminho, double distancia, String algoritmo) {

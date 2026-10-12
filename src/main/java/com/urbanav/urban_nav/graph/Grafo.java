@@ -61,6 +61,18 @@ public class Grafo {
         return maisProximo;
     }
 
+    /**
+     * Retorna a distância, em metros, até ao nó viário mais próximo.
+     * A coordenada do POI pode estar no interior de um edifício, por isso
+     * o consumidor decide qual é a distância máxima aceitável para o snap.
+     */
+    public double distanciaAoNoMaisProximo(double lat, double lon) {
+        NodeOsm proximo = nodoMaisProximo(lat, lon);
+        if (proximo == null) return Double.POSITIVE_INFINITY;
+        NodeOsm ponto = new NodeOsm(-1, lat, lon);
+        return ponto.distanciaAte(proximo);
+    }
+
     // Limpa flags de visitado em todos os nos (para BFS/DFS)
     public void limparVisitados() {
         for (NoGrafo noGrafo : nos.values()) {

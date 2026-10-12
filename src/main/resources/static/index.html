@@ -2668,7 +2668,12 @@
             const t0 = performance.now();
             const url = `${API}/rota/${a}?origemLat=${ptA.lat}&origemLon=${ptA.lng}&destinoLat=${ptB.lat}&destinoLon=${ptB.lng}`;
             const res = await fetch(url);
-            if (!res.ok) throw new Error(`route request failed: ${res.status}`);
+            if (!res.ok) {
+              const error = await res.json().catch(() => ({}));
+              throw new Error(
+                error.message || `route request failed: ${res.status}`,
+              );
+            }
             const d = await res.json();
             const ms = Math.round(performance.now() - t0);
             if (d.caminho && d.caminho.length > 1) {
@@ -2676,8 +2681,8 @@
               renderRes(a, d, ms);
               if (!bestData && a === algo) bestData = d;
             } else renderResErr(a);
-          } catch {
-            renderResErr(a);
+          } catch (error) {
+            renderResErr(a, error.message);
           }
         }
         if (bestData) {
@@ -2754,10 +2759,10 @@
   </div>`;
         document.getElementById("rbody").appendChild(el);
       }
-      function renderResErr(a) {
+      function renderResErr(a, message = "Sem caminho encontrado") {
         const el = document.createElement("div");
         el.className = "rcard";
-        el.innerHTML = `<div class="rhead rh${a[0]}">${N[a]}</div><div style="padding:10px 12px;font-size:12px;color:var(--hint);font-family:var(--mono)">Sem caminho encontrado</div>`;
+        el.innerHTML = `<div class="rhead rh${a[0]}">${N[a]}</div><div style="padding:10px 12px;font-size:12px;color:var(--hint);font-family:var(--mono)">${message}</div>`;
         document.getElementById("rbody").appendChild(el);
       }
 
