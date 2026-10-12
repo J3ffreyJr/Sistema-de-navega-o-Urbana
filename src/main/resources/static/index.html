@@ -309,15 +309,15 @@
         to {
           transform: translateY(-50%) rotate(360deg);
         }
-        @media (prefers-reduced-motion: reduce) {
-          *,
-          *::before,
-          *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            scroll-behavior: auto !important;
-            transition-duration: 0.01ms !important;
-          }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
         }
       }
 
@@ -992,6 +992,29 @@
         pointer-events: none;
         box-shadow: var(--shadowlg);
         white-space: nowrap;
+        opacity: 0;
+        transform: translateX(-50%) translateY(-6px);
+        transition: opacity 180ms ease-out, transform 220ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      #banner.is-visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      .leaflet-overlay-pane path.route-line {
+        transition: opacity 320ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      .waypoint-pin {
+        animation: waypoint-pop 340ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      @keyframes waypoint-pop {
+        from {
+          opacity: 0;
+          transform: rotate(-45deg) scale(0.72);
+        }
+        to {
+          opacity: 1;
+          transform: rotate(-45deg) scale(1);
+        }
       }
       #legend {
         position: absolute;
@@ -1317,6 +1340,9 @@
                   id="pin"
                   name="search"
                   inputmode="search"
+                  aria-controls="pdrop"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
                   placeholder="ex: Baia Mall, Shoprite, Costa do Sol…"
                   autocomplete="off"
                 />
@@ -1324,7 +1350,7 @@
                   <i class="ti ti-x"></i>
                 </button>
                 <div class="spin" id="pspin"></div>
-                <div id="pdrop"></div>
+                <div id="pdrop" role="listbox" aria-label="Resultados de locais"></div>
               </div>
             </div>
 
@@ -2052,7 +2078,7 @@
       }
       function pinMk(lat, lng, col, lbl) {
         const icon = L.divIcon({
-          html: `<div style="width:30px;height:30px;background:${col};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);color:#fff;font-size:11px;font-weight:700;font-family:Outfit,sans-serif">${lbl}</span></div>`,
+          html: `<div class="waypoint-pin" style="width:30px;height:30px;background:${col};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);color:#fff;font-size:11px;font-weight:700;font-family:Outfit,sans-serif">${lbl}</span></div>`,
           className: "",
           iconSize: [30, 30],
           iconAnchor: [15, 30],
@@ -2199,11 +2225,38 @@
         }
       }
 
-      /* ── SEARCH POI — usa dados reais do OSM via backend ── */
-      document.getElementById("pin").addEventListener("input", function () {
+      /* ── SEARCH POI — POIs locais com geocodificador secundário ── */
+      let searchRequestId = 0;
+      const SECONDARY_GEOCODER =
+        "https://nominatim.openstreetmap.org/search";
+      const MAPUTO_VIEWBOX = "32.42,-25.77,32.72,-26.00";
+      const searchInput = document.getElementById("pin");
+      searchInput.addEventListener("keydown", async (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        const route = parseNaturalRoute(searchInput.value);
+        if (route) {
+          await applyNaturalRoute(route);
+          return;
+        }
+        const firstResult = cachedPois[0];
+        if (firstResult) {
+          selPoi(
+            firstResult.lat,
+            firstResult.lon,
+            firstResult.nome,
+            firstResult.tipo,
+          );
+        } else if (searchInput.value.trim().length >= 2) {
+          showBanner("Escolha um local nos resultados da pesquisa");
+        }
+      });
+      searchInput.addEventListener("input", function () {
         document.getElementById("pclr").style.display = this.value
           ? "flex"
           : "none";
+        cachedPois = [];
+        searchRequestId += 1;
         clearTimeout(poiTO);
         const q = this.value.trim();
         if (q.length < 2) {
@@ -2214,43 +2267,160 @@
       });
 
       async function searchPoi(q) {
+        const requestId = ++searchRequestId;
         const spin = document.getElementById("pspin");
         spin.style.display = "block";
         document.getElementById("pclr").style.display = "none";
 
         try {
-          // Fonte principal: backend (dados do ficheiro OSM)
+          // A pesquisa usa apenas os POIs locais carregados do OSM da cidade.
           const res = await fetch(
             `${API}/pois/busca?q=${encodeURIComponent(q)}&limite=10`,
           );
           if (!res.ok) throw new Error("backend error");
           const data = await res.json();
-          cachedPois = data;
-          renderDrop(data, q, "OSM local");
-        } catch {
-          // Fallback: Nominatim (complementar, sem dependência crítica)
-          try {
-            const r = await fetch(
-              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Maputo")}&format=json&limit=8&bounded=1&viewbox=32.42,-26.00,32.72,-25.77`,
+          if (requestId !== searchRequestId) return;
+          if (data.length) {
+            cachedPois = data;
+            renderDrop(data, q, "POIs locais");
+          } else {
+            const secondary = await searchSecondary(q);
+            if (requestId !== searchRequestId) return;
+            cachedPois = secondary;
+            renderDrop(
+              secondary,
+              q,
+              secondary.length ? "Nominatim (fonte secundária)" : "fontes locais",
             );
-            const d = await r.json();
-            const mapped = d.map((x) => ({
-              nome: x.display_name.split(",")[0],
-              lat: parseFloat(x.lat),
-              lon: parseFloat(x.lon),
-              tipo: x.type || x.class,
-              tipoLabel: x.type || "Local",
-              morada: x.display_name,
-            }));
-            cachedPois = mapped;
-            renderDrop(mapped, q, "Nominatim");
-          } catch {
-            renderDropEmpty();
+          }
+        } catch {
+          if (requestId === searchRequestId) {
+            try {
+              const secondary = await searchSecondary(q);
+              if (requestId !== searchRequestId) return;
+              cachedPois = secondary;
+              renderDrop(
+                secondary,
+                q,
+                secondary.length ? "Nominatim (fonte secundária)" : "fontes locais",
+              );
+            } catch {
+              if (requestId === searchRequestId) {
+                cachedPois = [];
+                renderDropEmpty("Não foi possível consultar as fontes de locais.");
+              }
+            }
           }
         } finally {
           spin.style.display = "none";
           document.getElementById("pclr").style.display =
             document.getElementById("pin").value ? "flex" : "none";
+        }
+
+      }
+
+      async function searchSecondary(query) {
+        const url =
+          `${SECONDARY_GEOCODER}?q=${encodeURIComponent(query + ", Maputo")}` +
+          `&format=jsonv2&addressdetails=1&limit=8&bounded=1&viewbox=${MAPUTO_VIEWBOX}`;
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error("secondary geocoder failed");
+        const data = await response.json();
+        return data
+          .filter((item) => item.lat && item.lon)
+          .map((item) => ({
+            nome: item.name || item.display_name.split(",")[0],
+            lat: Number(item.lat),
+            lon: Number(item.lon),
+            tipo: item.type || item.class || "place",
+            tipoLabel: "Fonte secundária",
+            morada: item.display_name,
+            fonte: "Nominatim",
+          }));
+      }
+
+      function parseNaturalRoute(value) {
+        const text = value.trim().replace(/\s+/g, " ");
+        if (!text) return null;
+        const match = text.match(
+          /^(?:quero\s+ir\s+|ir\s+|leve[-\s]?me\s+)?(?:de|da|do|desde)\s+(.+?)\s+(?:até|ate|para|a)\s+(.+)$/i,
+        );
+        if (!match) return null;
+        const origin = cleanPlacePhrase(match[1]);
+        const destination = cleanPlacePhrase(match[2]);
+        return origin && destination ? { origin, destination } : null;
+      }
+
+      function cleanPlacePhrase(value) {
+        return value
+          .trim()
+          .replace(/^(?:o|a|os|as|um|uma)\s+/i, "")
+          .replace(/^(?:ao|à|aos|às)\s+/i, "")
+          .trim();
+      }
+
+      async function findLocalPoi(query) {
+        try {
+          const response = await fetch(
+            `${API}/pois/busca?q=${encodeURIComponent(query)}&limite=1`,
+          );
+          if (!response.ok) throw new Error("local POI search failed");
+          const results = await response.json();
+          if (results[0]) return results[0];
+        } catch {
+          // A fonte secundária abaixo mantém a pesquisa disponível se o backend falhar.
+        }
+        const secondary = await searchSecondary(query);
+        return secondary[0] || null;
+      }
+
+      async function applyNaturalRoute(route) {
+        const button = document.getElementById("brun");
+        button.disabled = true;
+        setStatus("ld", "A procurar os pontos locais…");
+        try {
+          const [origin, destination] = await Promise.all([
+            findLocalPoi(route.origin),
+            findLocalPoi(route.destination),
+          ]);
+          if (!origin || !destination) {
+            const missing = !origin && !destination
+              ? "origem e destino"
+              : !origin
+                ? "origem"
+                : "destino";
+            showBanner(`Não encontrei a ${missing} nas fontes disponíveis.`);
+            return;
+          }
+          setA(origin.lat, origin.lon, origin.nome);
+          setB(destination.lat, destination.lon, destination.nome);
+          map.fitBounds(
+            L.latLngBounds(
+              [origin.lat, origin.lon],
+              [destination.lat, destination.lon],
+            ),
+            { padding: [70, 70] },
+          );
+          document.getElementById("pin").value =
+            `${origin.nome} → ${destination.nome}`;
+          hideDrop();
+          updRun();
+          const usedSecondary = origin.fonte || destination.fonte;
+          showBanner(
+            usedSecondary
+              ? "Rota definida; pelo menos um local veio da fonte secundária."
+              : "Origem e destino definidos a partir dos pontos locais.",
+          );
+          setStatus(
+            serverOk ? "on" : "er",
+            serverOk ? "Locais encontrados" : "Servidor offline",
+          );
+        } catch {
+          showBanner("Não foi possível consultar as fontes de locais.");
+        } finally {
+          button.disabled = !(ptA && ptB && serverOk);
         }
       }
 
@@ -2261,6 +2431,7 @@
           return;
         }
         el.style.display = "block";
+        searchInput.setAttribute("aria-expanded", "true");
         const rows = items
           .slice(0, 10)
           .map((p) => {
@@ -2283,15 +2454,17 @@
           `<div class="psrc"><i class="ti ti-database"></i> Fonte: ${fonte}</div>`;
       }
 
-      function renderDropEmpty() {
+      function renderDropEmpty(message = "Nenhum local encontrado nos pontos locais do mapa.") {
         const el = document.getElementById("pdrop");
         el.style.display = "block";
+        searchInput.setAttribute("aria-expanded", "true");
         el.innerHTML =
-          '<div class="pempty"><i class="ti ti-search-off" style="font-size:16px;vertical-align:-3px"></i> Nenhum local encontrado</div>';
+          `<div class="pempty"><i class="ti ti-search-off" style="font-size:16px;vertical-align:-3px"></i> ${message}</div>`;
       }
 
       function hideDrop() {
         document.getElementById("pdrop").style.display = "none";
+        searchInput.setAttribute("aria-expanded", "false");
       }
 
       function selPoi(lat, lon, nm, tipo) {
@@ -2305,6 +2478,8 @@
       }
 
       function clrPoi() {
+        searchRequestId += 1;
+        cachedPois = [];
         document.getElementById("pin").value = "";
         document.getElementById("pclr").style.display = "none";
         hideDrop();
@@ -2416,15 +2591,18 @@
 
       function drawRoute(a, pts) {
         const ll = pts.map((p) => [p.lat, p.lon]);
+        const targetOpacity = a === "dijkstra" ? 0.9 : 0.6;
         const l = L.polyline(ll, {
           color: C[a],
           weight: a === "dijkstra" ? 6 : 4,
-          opacity: a === "dijkstra" ? 0.9 : 0.6,
+          opacity: 0,
+          className: "route-line",
           dashArray: a === "bfs" ? "10,6" : a === "dfs" ? "4,7" : null,
           lineCap: "round",
           lineJoin: "round",
         }).addTo(map);
         rLayers[a] = l;
+        requestAnimationFrame(() => l.setStyle({ opacity: targetOpacity }));
       }
       function clrRoutes() {
         Object.values(rLayers).forEach((l) => map.removeLayer(l));
@@ -2778,8 +2956,14 @@
         const b = document.getElementById("banner");
         b.textContent = msg;
         b.style.display = "block";
+        requestAnimationFrame(() => b.classList.add("is-visible"));
         clearTimeout(b._t);
-        b._t = setTimeout(() => (b.style.display = "none"), 2800);
+        b._t = setTimeout(() => {
+          b.classList.remove("is-visible");
+          setTimeout(() => {
+            if (!b.classList.contains("is-visible")) b.style.display = "none";
+          }, 220);
+        }, 2800);
       }
 
       /* ── STATUS ── */

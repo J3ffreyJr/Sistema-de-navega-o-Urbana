@@ -19,7 +19,8 @@ public class PoiController {
 
     /**
      * GET /api/pois/busca?q=baia+mall&limite=10
-     * Busca por nome — fonte: ficheiro OSM local, sem API externa
+     * Busca por nome — fonte principal: ficheiro OSM local.
+     * A interface pode consultar uma fonte secundária quando não houver resultados locais.
      */
     @GetMapping("/busca")
     public ResponseEntity<List<Map<String, Object>>> buscar(
@@ -65,8 +66,9 @@ public class PoiController {
     public ResponseEntity<Map<String, Object>> stats() {
         Map<String, Object> resp = new HashMap<>();
         resp.put("total", poiService.totalPois());
-        resp.put("fonte", "maputo.osm (local)");
-        resp.put("apiExterna", false);
+        resp.put("fonte", "maputo-centro.osm (local)");
+        resp.put("fontePrincipal", "POIs OSM locais");
+        resp.put("apiExterna", "Nominatim (fallback da interface)");
 
         // Contar por categoria
         Map<String, Long> porCat = new HashMap<>();
