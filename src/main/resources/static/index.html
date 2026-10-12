@@ -2458,18 +2458,19 @@
             `${origin.nome} → ${destination.nome}`;
           hideDrop();
           updRun();
+          const routeCalculated = await calcular();
           const usedSecondary = origin.fonte || destination.fonte;
+          if (!routeCalculated) {
+            showBanner("Os locais foram encontrados, mas não foi possível calcular a rota.");
+            return;
+          }
           showBanner(
             usedSecondary
-              ? "Rota definida; pelo menos um local veio da fonte secundária."
-              : "Origem e destino definidos a partir dos pontos locais.",
-          );
-          setStatus(
-            serverOk ? "on" : "er",
-            serverOk ? "Locais encontrados" : "Servidor offline",
+              ? "Rota calculada; pelo menos um local veio da fonte secundária."
+              : "Rota calculada com os pontos locais.",
           );
         } catch {
-          showBanner("Não foi possível consultar as fontes de locais.");
+          showBanner("Não foi possível encontrar os locais ou calcular a rota.");
         } finally {
           button.disabled = !(ptA && ptB && serverOk);
         }
@@ -2614,7 +2615,15 @@
 
       /* ── CALCULATE ── */
       async function calcular() {
-        if (!ptA || !ptB) return;
+        if (
+          !ptA ||
+          !ptB ||
+          !isValidCoordinate(ptA.lat, ptA.lng) ||
+          !isValidCoordinate(ptB.lat, ptB.lng)
+        ) {
+          showBanner("Defina dois locais com coordenadas válidas.");
+          return false;
+        }
         setStatus("ld", "A calcular rota…");
         clrRoutes();
         document.getElementById("rbody").innerHTML = "";
@@ -2643,7 +2652,12 @@
           fitRoutes();
         }
         updLegend(algos);
+        if (!bestData) {
+          setStatus("er", "Rota não encontrada");
+          return false;
+        }
         setStatus("on", "Rota calculada");
+        return true;
       }
 
       function drawRoute(a, pts) {
