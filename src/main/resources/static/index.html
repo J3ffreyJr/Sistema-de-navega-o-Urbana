@@ -87,6 +87,21 @@
         font-family: var(--sans);
         font-size: 14px;
       }
+      :where(button, input, select, a, [tabindex]):focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--green) 70%, transparent);
+        outline-offset: 2px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
       #app {
         display: flex;
         height: 100vh;
@@ -156,7 +171,7 @@
         align-items: center;
         justify-content: center;
         color: var(--sub);
-        transition: all 0.18s;
+        transition: background-color 0.18s, color 0.18s, border-color 0.18s;
         flex-shrink: 0;
       }
       .ibtn:hover {
@@ -185,7 +200,7 @@
         font-weight: 500;
         color: var(--hint);
         border-bottom: 2px solid transparent;
-        transition: all 0.18s;
+        transition: color 0.18s, border-color 0.18s;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -294,6 +309,16 @@
         to {
           transform: translateY(-50%) rotate(360deg);
         }
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
       }
 
       /* DROPDOWN */
@@ -318,6 +343,12 @@
         gap: 10px;
         padding: 10px 12px;
         cursor: pointer;
+        width: 100%;
+        border: 0;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: transparent;
         border-bottom: 1px solid var(--border);
         transition: background 0.14s;
       }
@@ -403,6 +434,10 @@
       .wpr:hover {
         background: var(--s3);
       }
+      .prow:focus-visible {
+        outline: 3px solid var(--green);
+        outline-offset: -3px;
+      }
       .wpr.sel {
         background: var(--gbg);
       }
@@ -444,7 +479,7 @@
         color: var(--hint);
         padding: 3px;
         border-radius: 4px;
-        transition: all 0.14s;
+        transition: background-color 0.14s, color 0.14s;
         font-size: 17px;
         line-height: 1;
       }
@@ -472,7 +507,7 @@
         gap: 5px;
         padding: 4px 8px;
         border-radius: var(--rx);
-        transition: all 0.14s;
+        transition: background-color 0.14s, color 0.14s;
       }
       .wctrl button:hover {
         background: var(--s3);
@@ -497,7 +532,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        transition: all 0.18s;
+        transition: background-color 0.18s, color 0.18s, border-color 0.18s;
       }
       #bgps:hover {
         border-color: var(--green);
@@ -537,7 +572,7 @@
         font-weight: 500;
         cursor: pointer;
         text-align: center;
-        transition: all 0.18s;
+        transition: background-color 0.18s, color 0.18s, border-color 0.18s;
       }
       .apill:hover {
         border-color: var(--border2);
@@ -597,7 +632,7 @@
         cursor: pointer;
         position: relative;
         flex-shrink: 0;
-        transition: all 0.2s;
+        transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
       }
       .sw.on {
         background: var(--green);
@@ -1058,6 +1093,8 @@
           width: 100%;
           min-width: unset;
           height: 52vh;
+          max-height: 70vh;
+          overflow-y: auto;
           border-right: none;
           border-bottom: 1px solid var(--border);
         }
@@ -1078,6 +1115,7 @@
         align-items: center;
         justify-content: center;
         padding: 16px;
+        overscroll-behavior: contain;
       }
       .modal-card {
         background: var(--surface);
@@ -1149,7 +1187,7 @@
         border-radius: var(--rs);
         background: var(--s2);
         cursor: pointer;
-        transition: all 0.15s;
+        transition: background-color 0.15s, border-color 0.15s;
       }
       .layer-opt:hover {
         background: var(--s3);
@@ -1212,6 +1250,13 @@
       .btn-save:hover {
         opacity: 0.9;
       }
+      .srch input:focus-visible,
+      .trow2 input:focus-visible,
+      .trow2 select:focus-visible,
+      .minput:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--green) 70%, transparent);
+        outline-offset: 2px;
+      }
       .key-status {
         margin-top: 8px;
         font-size: 11px;
@@ -1232,26 +1277,26 @@
             </div>
           </div>
           <div class="acts">
-            <button class="ibtn" onclick="openLayerModal()" title="Camadas e Chave do Mapa">
+            <button class="ibtn" onclick="openLayerModal()" title="Camadas e Chave do Mapa" aria-label="Abrir camadas e chave do mapa">
               <i class="ti ti-layers-subtract"></i>
             </button>
-            <button class="ibtn" onclick="togTheme()" title="Tema">
+            <button class="ibtn" onclick="togTheme()" title="Tema" aria-label="Alternar tema claro ou escuro">
               <i class="ti ti-moon" id="tico"></i>
             </button>
-            <button class="ibtn" onclick="togFS()" title="Ecrã inteiro">
+            <button class="ibtn" onclick="togFS()" title="Ecrã inteiro" aria-label="Alternar ecrã inteiro">
               <i class="ti ti-arrows-maximize"></i>
             </button>
           </div>
         </div>
 
-        <div id="ntabs">
-          <button class="ntab on" data-tab="dir" onclick="swTab('dir')">
+        <div id="ntabs" role="tablist" aria-label="Funcionalidades do mapa">
+          <button class="ntab on" id="tab-button-dir" role="tab" aria-selected="true" aria-controls="tab-dir" data-tab="dir" onclick="swTab('dir')">
             <i class="ti ti-route"></i> Rotas
           </button>
-          <button class="ntab" data-tab="trf" onclick="swTab('trf')">
+          <button class="ntab" id="tab-button-trf" role="tab" aria-selected="false" aria-controls="tab-trf" data-tab="trf" onclick="swTab('trf')">
             <i class="ti ti-traffic-lights"></i> Trânsito
           </button>
-          <button class="ntab" data-tab="trt" onclick="swTab('trt')">
+          <button class="ntab" id="tab-button-trt" role="tab" aria-selected="false" aria-controls="tab-trt" data-tab="trt" onclick="swTab('trt')">
             <i class="ti ti-bus"></i> Transportes
           </button>
         </div>
@@ -1266,13 +1311,16 @@
               <div class="lbl">Buscar local</div>
               <div class="srch" style="position: relative">
                 <i class="ti ti-search sico"></i>
+                <label class="sr-only" for="pin">Buscar local</label>
                 <input
                   type="text"
                   id="pin"
-                  placeholder="ex: Baia Mall, Shoprite, Costa do Sol..."
+                  name="search"
+                  inputmode="search"
+                  placeholder="ex: Baia Mall, Shoprite, Costa do Sol…"
                   autocomplete="off"
                 />
-                <button class="sclr" id="pclr" onclick="clrPoi()">
+                <button class="sclr" id="pclr" onclick="clrPoi()" aria-label="Limpar pesquisa">
                   <i class="ti ti-x"></i>
                 </button>
                 <div class="spin" id="pspin"></div>
@@ -1287,12 +1335,12 @@
               </button>
               <div style="height: 7px"></div>
               <div class="wpc">
-                <div class="wpr sel" id="wra" onclick="pick('a')">
+                <div class="wpr sel" id="wra" role="button" tabindex="0" aria-label="Selecionar origem" onclick="pick('a')" onkeydown="activateWaypoint(event, 'a')">
                   <span class="wdot da"></span><span class="wtag">A</span>
                   <span class="wval wph" id="wva"
-                    >Seleccione no mapa ou busque acima...</span
+                    >Seleccione no mapa ou busque acima…</span
                   >
-                  <button class="wdel" onclick="clrWP('a', event)">
+                  <button class="wdel" onclick="clrWP('a', event)" aria-label="Limpar origem">
                     <i class="ti ti-x"></i>
                   </button>
                 </div>
@@ -1307,12 +1355,12 @@
                     <i class="ti ti-flag"></i> Destino
                   </button>
                 </div>
-                <div class="wpr" id="wrb" onclick="pick('b')">
+                <div class="wpr" id="wrb" role="button" tabindex="0" aria-label="Selecionar destino" onclick="pick('b')" onkeydown="activateWaypoint(event, 'b')">
                   <span class="wdot db"></span><span class="wtag">B</span>
                   <span class="wval wph" id="wvb"
-                    >Seleccione no mapa ou busque acima...</span
+                    >Seleccione no mapa ou busque acima…</span
                   >
-                  <button class="wdel" onclick="clrWP('b', event)">
+                  <button class="wdel" onclick="clrWP('b', event)" aria-label="Limpar destino">
                     <i class="ti ti-x"></i>
                   </button>
                 </div>
@@ -1344,7 +1392,7 @@
                     <div class="tsub">Dijkstra + BFS + DFS em simultâneo</div>
                   </div>
                 </div>
-                <button class="sw" id="swcmp" onclick="togOpt('cmp')"></button>
+                <button class="sw" id="swcmp" role="switch" aria-checked="false" aria-label="Comparar algoritmos" onclick="togOpt('cmp')"></button>
               </div>
               <div class="trow">
                 <div class="tlft">
@@ -1357,6 +1405,9 @@
                 <button
                   class="sw"
                   id="swtime"
+                  role="switch"
+                  aria-checked="false"
+                  aria-label="Ativar horário de saída"
                   onclick="togOpt('time')"
                 ></button>
               </div>
@@ -1371,15 +1422,17 @@
                     <div class="tsub">clique em pontos no mapa</div>
                   </div>
                 </div>
-                <button class="sw" id="swmsr" onclick="togOpt('msr')"></button>
+                <button class="sw" id="swmsr" role="switch" aria-checked="false" aria-label="Ativar medição de distâncias" onclick="togOpt('msr')"></button>
               </div>
             </div>
 
             <div id="tpanel">
               <div class="lbl">Horário</div>
               <div class="trow2">
-                <input type="time" id="tdep" value="08:00" />
-                <select id="tspd">
+                <label class="sr-only" for="tdep">Horário de saída</label>
+                <input type="time" id="tdep" name="departure-time" value="08:00" />
+                <label class="sr-only" for="tspd">Velocidade de deslocação</label>
+                <select id="tspd" name="travel-speed">
                   <option value="5">A pé (5 km/h)</option>
                   <option value="30" selected>Cidade (30 km/h)</option>
                   <option value="60">Via rápida (60 km/h)</option>
@@ -1620,13 +1673,13 @@
         <!-- /body -->
         <div id="sbar">
           <span class="sdot ld" id="sdot"></span
-          ><span id="stxt">A conectar...</span>
+          ><span id="stxt" aria-live="polite">A conectar…</span>
         </div>
       </aside>
 
       <div id="mapw">
         <div id="map"></div>
-        <div id="banner"></div>
+        <div id="banner" role="status" aria-live="polite"></div>
         <div id="legend">
           <div class="lt">Legenda</div>
           <div id="legitems"></div>
@@ -1643,22 +1696,25 @@
     <div
       id="layerModal"
       class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="layerModalTitle"
       style="display: none"
       onclick="closeLayerModal(event)"
     >
       <div class="modal-card" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title">
+          <div class="modal-title" id="layerModalTitle">
             <i class="ti ti-map-2" style="color: var(--green)"></i>
             Configuração de Camadas do Mapa
           </div>
-          <button class="modal-close" onclick="closeLayerModal()">
+          <button class="modal-close" onclick="closeLayerModal()" aria-label="Fechar configuração de camadas">
             <i class="ti ti-x"></i>
           </button>
         </div>
         <div class="modal-body">
-          <div class="msec-title">Camada Base</div>
-          <div class="layer-options">
+          <fieldset class="layer-options" style="border: 0">
+            <legend class="msec-title">Camada Base</legend>
             <label class="layer-opt">
               <input
                 type="radio"
@@ -1720,7 +1776,7 @@
                 <span>Fotografia aérea de alta definição de Maputo</span>
               </div>
             </label>
-          </div>
+          </fieldset>
 
           <div class="msec-title" style="margin-top: 16px">
             Chave de API CARTO (Opcional)
@@ -1741,7 +1797,11 @@
             <input
               type="text"
               id="cartoKeyInput"
-              placeholder="Cole a chave CARTO aqui (ex: 3b1a...)"
+              name="carto-api-key"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Chave de API CARTO"
+              placeholder="Cole a chave CARTO aqui (ex: 3b1a…)"
               class="minput"
             />
             <button class="btn-save" onclick="saveCartoKey()">Guardar</button>
@@ -2045,6 +2105,12 @@
             : "Clique no mapa ou busque um local para definir o DESTINO",
         );
       }
+      function activateWaypoint(event, waypoint) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          pick(waypoint);
+        }
+      }
       function setWV(id, val) {
         const el = document.getElementById(id);
         if (val) {
@@ -2052,7 +2118,7 @@
           el.className = "wval";
           el.dataset.nm = val;
         } else {
-          el.textContent = "Seleccione no mapa ou busque acima...";
+          el.textContent = "Seleccione no mapa ou busque acima…";
           el.className = "wval wph";
           el.dataset.nm = "";
         }
@@ -2066,7 +2132,7 @@
         }
         const btn = document.getElementById("bgps");
         btn.querySelector("i").classList.add("gpsp");
-        setStatus("ld", "A obter localização GPS...");
+        setStatus("ld", "A obter localização GPS…");
         navigator.geolocation.getCurrentPosition(
           (p) => {
             setA(p.coords.latitude, p.coords.longitude, "A minha localização");
@@ -2111,11 +2177,13 @@
         if (k === "cmp") {
           cmp = !cmp;
           document.getElementById("swcmp").classList.toggle("on", cmp);
+          document.getElementById("swcmp").setAttribute("aria-checked", cmp);
           document.querySelector(".arow").style.opacity = cmp ? ".4" : "1";
         }
         if (k === "time") {
           timeMode = !timeMode;
           document.getElementById("swtime").classList.toggle("on", timeMode);
+          document.getElementById("swtime").setAttribute("aria-checked", timeMode);
           document.getElementById("tpanel").style.display = timeMode
             ? "block"
             : "none";
@@ -2123,6 +2191,7 @@
         if (k === "msr") {
           msrMode = !msrMode;
           document.getElementById("swmsr").classList.toggle("on", msrMode);
+          document.getElementById("swmsr").setAttribute("aria-checked", msrMode);
           document.getElementById("mpanel").style.display = msrMode
             ? "block"
             : "none";
@@ -2202,11 +2271,11 @@
             const morada = p.morada
               ? `<div class="padr">${p.morada}</div>`
               : "";
-            return `<div class="prow" onclick="selPoi(${p.lat},${p.lon},'${(p.nome || "").replace(/'/g, "\\'")}','${tipo}')">
+            return `<button type="button" class="prow" aria-label="Selecionar ${p.nome}" onclick="selPoi(${p.lat},${p.lon},'${(p.nome || "").replace(/'/g, "\\'")}','${tipo}')">
       <div class="pico" style="background:${col}22"><i class="ti ${ico}" style="color:${col}"></i></div>
       <div><div class="pnm">${p.nome}</div>${morada}</div>
       <span class="ptyp" style="background:${col}15;color:${col}">${label}</span>
-    </div>`;
+    </button>`;
           })
           .join("");
         el.innerHTML =
@@ -2314,7 +2383,7 @@
       /* ── CALCULATE ── */
       async function calcular() {
         if (!ptA || !ptB) return;
-        setStatus("ld", "A calcular rota...");
+        setStatus("ld", "A calcular rota…");
         clrRoutes();
         document.getElementById("rbody").innerHTML = "";
         document.getElementById("rsec").style.display = "block";
@@ -2599,7 +2668,11 @@
           document
             .querySelector(`[data-tab="${x}"]`)
             .classList.toggle("on", x === t);
+          document
+            .querySelector(`[data-tab="${x}"]`)
+            .setAttribute("aria-selected", x === t);
         });
+        history.replaceState(null, "", `#${t}`);
       }
 
       /* ── THEME ── */
@@ -2614,7 +2687,9 @@
       }
 
       /* ── MODAL DE CAMADAS & CHAVE CARTO ── */
+      let lastFocusedElement = null;
       function openLayerModal() {
+        lastFocusedElement = document.activeElement;
         const input = document.getElementById("cartoKeyInput");
         if (input) input.value = cartoKey;
         const radio = document.querySelector(
@@ -2623,13 +2698,17 @@
         if (radio) radio.checked = true;
         updateKeyStatusMsg();
         const m = document.getElementById("layerModal");
-        if (m) m.style.display = "flex";
+        if (m) {
+          m.style.display = "flex";
+          document.getElementById("layerModal").querySelector(".modal-close").focus();
+        }
       }
 
       function closeLayerModal(e) {
         if (e && e.target !== e.currentTarget) return;
         const m = document.getElementById("layerModal");
         if (m) m.style.display = "none";
+        if (lastFocusedElement) lastFocusedElement.focus();
       }
 
       function onLayerChange(val) {
@@ -2679,7 +2758,7 @@
           const masked =
             cartoKey.length > 8
               ? cartoKey.substring(0, 4) +
-                "..." +
+                "…" +
                 cartoKey.substring(cartoKey.length - 4)
               : cartoKey;
           el.innerHTML = `<span style="color:var(--green)">✓ Chave configurada (${masked}). CARTO ativa sem marca d'água.</span>`;
@@ -2723,13 +2802,23 @@
           // Carregar markers dos POIs no mapa após servidor estar online
           carregarPoiMarkers();
         } catch {
-          setStatus("er", "Servidor offline — tentando conectar ao backend...");
+          setStatus("er", "Servidor offline — tentando conectar ao backend…");
           setTimeout(check, 5000);
         }
       }
 
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && document.getElementById("layerModal").style.display === "flex") {
+          closeLayerModal();
+        }
+      });
+
       initMap();
       pick("a");
+      const initialTab = ["dir", "trf", "trt"].includes(location.hash.slice(1))
+        ? location.hash.slice(1)
+        : "dir";
+      swTab(initialTab);
       check();
     </script>
   </body>
