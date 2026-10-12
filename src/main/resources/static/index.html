@@ -2280,47 +2280,79 @@
 
         try {
           // A pesquisa usa apenas os POIs locais carregados do OSM da cidade.
-          const res = await fetch(
-            `${API}/pois/busca?q=${encodeURIComponent(q)}&limite=10`,
-          );
-          if (!res.ok) throw new Error("backend error");
-          const data = await res.json();
-          if (requestId !== searchRequestId) return;
-          if (data.length) {
-            cachedPois = data;
-            renderDrop(data, q, "POIs locais");
-          } else {
-            const secondary = await searchSecondary(q);
-            if (requestId !== searchRequestId) return;
-            cachedPois = secondary;
-            renderDrop(
-              secondary,
-              q,
-              secondary.length ? "Nominatim (fonte secundária)" : "fontes locais",
+          let data = [];
+          try {
+            const res = await fetch(
+              `${API}/pois/busca?q=${encodeURIComponent(q)}&limite=20`,
             );
+            if (res.ok) data = await res.json();
+          } catch {
+            data = [];
           }
-        } catch {
-          if (requestId === searchRequestId) {
-            try {
-              const secondary = await searchSecondary(q);
-              if (requestId !== searchRequestId) return;
-              cachedPois = secondary;
-              renderDrop(
-                secondary,
-                q,
-                secondary.length ? "Nominatim (fonte secundária)" : "fontes locais",
-              );
-            } catch {
-              if (requestId === searchRequestId) {
-                cachedPois = [];
-                renderDropEmpty("Não foi possível consultar as fontes de locais.");
-              }
-            }
+          if (requestId !== searchRequestId) return;
+          let secondary = [];
+          try {
+            secondary = await searchSecondary(q);
+          } catch {
+            secondary = [];
+          }
+          if (requestId !== searchRequestId) return;
+          const merged = mergePoiResults(data, secondary);
+          cachedPois = merged;
+          if (merged.length) {
+            renderDrop(merged, q, getSearchSourceLabel(data, secondary));
+          } else {
+            renderDropEmpty("Nenhum local encontrado nas fontes disponíveis.");
           }
         } finally {
           spin.style.display = "none";
           document.getElementById("pclr").style.display =
             document.getElementById("pin").value ? "flex" : "none";
+        }
+
+        function getSearchSourceLabel(local, secondary) {
+          if (local.length && secondary.length) return "OSM local + fonte secundária";
+          if (local.length) return "POIs locais";
+          if (secondary.length) return "Nominatim (fonte secundária)";
+          return "fontes disponíveis";
+        }
+
+        function mergePoiResults(local, secondary) {
+          const result = local
+            .filter((poi) => isValidCoordinate(Number(poi.lat), Number(poi.lon)))
+            .map((poi) => ({
+              ...poi,
+              lat: Number(poi.lat),
+              lon: Number(poi.lon),
+              fonte: "OSM local",
+            }));
+          const secondaryOnly = secondary.filter(
+            (candidate) =>
+              !result.some((poi) => areSamePoi(poi, candidate)),
+          );
+          return result.concat(secondaryOnly);
+        }
+
+        function normalizePoiName(value) {
+          return (value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .trim();
+        }
+
+        function areSamePoi(first, second) {
+          const sameName =
+            normalizePoiName(first.nome) &&
+            normalizePoiName(first.nome) === normalizePoiName(second.nome);
+          const closeCoordinates =
+            Math.abs(Number(first.lat) - Number(second.lat)) < 0.0015 &&
+            Math.abs(Number(first.lon) - Number(second.lon)) < 0.0015;
+          return (
+            closeCoordinates &&
+            (sameName || !normalizePoiName(first.nome) || !normalizePoiName(second.nome))
+          );
         }
 
       }
@@ -2485,7 +2517,7 @@
         el.style.display = "block";
         searchInput.setAttribute("aria-expanded", "true");
         const rows = items
-          .slice(0, 10)
+          .slice(0, 20)
           .map((p) => {
             const tipo = p.tipo || "default";
             const ico = CAT_ICO[tipo] || CAT_ICO.default;
@@ -2636,6 +2668,7 @@
             const t0 = performance.now();
             const url = `${API}/rota/${a}?origemLat=${ptA.lat}&origemLon=${ptA.lng}&destinoLat=${ptB.lat}&destinoLon=${ptB.lng}`;
             const res = await fetch(url);
+            if (!res.ok) throw new Error(`route request failed: ${res.status}`);
             const d = await res.json();
             const ms = Math.round(performance.now() - t0);
             if (d.caminho && d.caminho.length > 1) {
@@ -2650,6 +2683,7 @@
         if (bestData) {
           renderDir(bestData.caminho);
           fitRoutes();
+          map.invalidateSize();
         }
         updLegend(algos);
         if (!bestData) {
